@@ -1,0 +1,349 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prince AI</title>
+<style>
+:root {
+  --bg:#101114; --panel:#18191d; --card:#222329;
+  --text:#f5f5f5; --muted:#a2a3ad; --accent:#8b5cf6;
+  --border:#303137;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+font-family:Inter,Arial,sans-serif;height:100vh;overflow:hidden}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer;color:inherit}
+.app{display:flex;height:100dvh}
+.sidebar{width:265px;background:#17181b;padding:15px;
+display:flex;flex-direction:column;border-right:1px solid var(--border);
+transition:transform .2s;flex-shrink:0}
+.brand{font-size:23px;font-weight:800;padding:8px 5px 23px}
+.brand span{color:var(--accent)}
+.newchat,.sidebtn{width:100%;text-align:left;padding:12px;
+border:1px solid var(--border);border-radius:12px;background:transparent;
+margin-bottom:10px}
+.newchat{background:var(--accent);border:0}
+.side-title{font-size:12px;color:var(--muted);margin:22px 5px 10px}
+.history{overflow:auto;flex:1}
+.history button{display:block;width:100%;text-align:left;
+background:transparent;border:0;border-radius:9px;padding:11px;
+color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.history button:hover,.sidebtn:hover{background:var(--card)}
+.profile{border-top:1px solid var(--border);padding-top:14px;
+display:flex;align-items:center;gap:10px}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--accent);
+display:grid;place-items:center;font-weight:bold;flex-shrink:0}
+.small{font-size:12px;color:var(--muted);margin-top:4px}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{height:65px;border-bottom:1px solid var(--border);
+display:flex;align-items:center;justify-content:space-between;
+padding:0 20px;gap:10px}
+.top-left{display:flex;align-items:center;gap:12px}
+select{background:var(--panel);color:var(--text);
+border:1px solid var(--border);padding:9px;border-radius:10px;max-width:180px}
+.iconbtn{background:transparent;border:1px solid var(--border);
+border-radius:10px;padding:9px}
+.chat{flex:1;overflow:auto;padding:24px 16px}
+.welcome{max-width:760px;margin:9vh auto 0;text-align:center}
+.logo{font-size:40px}
+.welcome h1{font-size:clamp(28px,5vw,42px);margin:12px 0}
+.gradient{background:linear-gradient(90deg,#a78bfa,#60a5fa);
+-webkit-background-clip:text;background-clip:text;color:transparent}
+.welcome p{color:var(--muted)}
+.suggestions{display:grid;grid-template-columns:1fr 1fr;gap:10px;
+margin-top:30px;text-align:left}
+.suggestion{background:var(--panel);border:1px solid var(--border);
+border-radius:14px;padding:15px;color:var(--text)}
+.suggestion:hover{border-color:var(--accent)}
+.message{max-width:800px;margin:0 auto 24px;display:flex;gap:12px;
+align-items:flex-start;line-height:1.75;white-space:pre-wrap;overflow-wrap:anywhere}
+.message .bubble{flex:1;padding-top:5px}
+.message.user .bubble{background:var(--card);padding:12px 15px;border-radius:15px}
+.message .avatar{width:32px;height:32px}
+.composer-wrap{padding:10px 16px 20px}
+.composer{max-width:800px;margin:auto;background:var(--panel);
+border:1px solid #41414b;border-radius:20px;padding:12px;
+box-shadow:0 10px 40px #0003}
+textarea{width:100%;resize:none;max-height:180px;min-height:45px;
+background:transparent;color:var(--text);border:0;outline:0;padding:9px}
+.controls{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hint{font-size:11px;color:var(--muted);text-align:center;margin-top:10px}
+.send{background:var(--accent);border:0;border-radius:12px;padding:10px 15px}
+.send:disabled{opacity:.5;cursor:wait}
+.status{font-size:12px;color:var(--muted)}
+.hidden{display:none!important}
+.overlay{position:fixed;inset:0;background:#0009;z-index:4}
+@media(max-width:700px){
+ .sidebar{position:fixed;inset:0 auto 0 0;z-index:5;
+ transform:translateX(-100%);height:100dvh}
+ .sidebar.open{transform:translateX(0)}
+ .topbar{padding:0 12px}
+ .chat{padding:16px 12px}
+ .suggestions{grid-template-columns:1fr}
+ .welcome{margin-top:5vh}
+ .composer-wrap{padding:8px 10px 12px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">✦ Prince <span>AI</span></div>
+    <button class="newchat" id="newChat">＋ New Chat</button>
+    <button class="sidebtn" id="clearHistory">⌫ Clear Chat History</button>
+    <div class="side-title">YOUR CONVERSATIONS</div>
+    <div class="history" id="history"></div>
+    <div class="profile">
+      <div class="avatar">P</div>
+      <div><b>Prince</b><div class="small">Class 9th · Student</div></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="top-left">
+        <button class="iconbtn" id="menuBtn" aria-label="Open menu">☰</button>
+        <b>Prince AI</b>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="model" aria-label="AI model">
+          <option value="llama-3.3-70b-versatile">Llama 3.3 70B</option>
+          <option value="openai/gpt-oss-20b">GPT OSS 20B</option>
+        </select>
+        <button class="iconbtn" id="themeBtn" title="Toggle theme">☼</button>
+      </div>
+    </header>
+
+    <section class="chat" id="chat">
+      <div class="welcome" id="welcome">
+        <div class="logo">✦</div>
+        <h1>Hello, <span class="gradient">Prince!</span></h1>
+        <p>Your AI study partner for Class 9 and beyond.</p>
+        <div class="suggestions">
+          <button class="suggestion" data-prompt="Explain photosynthesis for Class 9">🧪 Explain a science topic</button>
+          <button class="suggestion" data-prompt="Give me 5 general knowledge quiz questions">🌎 General knowledge quiz</button>
+          <button class="suggestion" data-prompt="Teach me algebra step by step">📐 Learn mathematics</button>
+          <button class="suggestion" data-prompt="Tell me an interesting fact about space">🚀 Explore space</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="composer-wrap">
+      <form class="composer" id="chatForm">
+        <textarea id="prompt" placeholder="Message Prince AI..." rows="1" required></textarea>
+        <div class="controls">
+          <span class="status" id="status">Ready to chat</span>
+          <button class="send" id="sendBtn" type="submit">Send ↑</button>
+        </div>
+      </form>
+      <div class="hint">Prince AI can make mistakes. Verify important answers.</div>
+    </div>
+  </main>
+</div>
+
+<div class="overlay hidden" id="overlay"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const chat = $("chat"), promptBox = $("prompt");
+let conversations = [];
+let current = [];
+let busy = false;
+let dark = true;
+
+function saveHistory(){
+  try { localStorage.setItem("prince-ai-history", JSON.stringify(conversations)); }
+  catch(e) {}
+}
+
+function loadHistory(){
+  try {
+    conversations = JSON.parse(localStorage.getItem("prince-ai-history") || "[]");
+    if (!Array.isArray(conversations)) conversations = [];
+  } catch(e) { conversations = []; }
+  renderHistory();
+}
+
+function renderHistory(){
+  const box = $("history");
+  box.replaceChildren();
+  conversations.forEach((item,index)=>{
+    const b = document.createElement("button");
+    b.textContent = "▢ " + (item.title || "New conversation");
+    b.title = item.title || "New conversation";
+    b.onclick = ()=>openConversation(index);
+    box.appendChild(b);
+  });
+}
+
+function persistCurrent(){
+  if (!current.length) return;
+  const first = current.find(m=>m.role==="user");
+  const title = first ? first.content.slice(0,35) : "New conversation";
+  if (conversations.length && conversations[0].id === activeId){
+    conversations[0].messages = current.slice();
+    conversations[0].title = title;
+  } else {
+    conversations.unshift({id:activeId,title,messages:current.slice()});
+  }
+  conversations = conversations.slice(0,40);
+  saveHistory();
+  renderHistory();
+}
+
+let activeId = makeId();
+function makeId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+function addMessage(role,text){
+  const empty = $("welcome");
+  if (empty) empty.remove();
+  const row = document.createElement("div");
+  row.className = "message " + (role==="user" ? "user" : "assistant");
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+  avatar.textContent = role==="user" ? "P" : "✦";
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  bubble.textContent = text;
+  row.append(avatar,bubble);
+  chat.appendChild(row);
+  chat.scrollTop = chat.scrollHeight;
+  return bubble;
+}
+
+function showWelcome(){
+  chat.replaceChildren();
+  const div = document.createElement("div");
+  div.className = "welcome";
+  div.id = "welcome";
+  div.innerHTML = '<div class="logo">✦</div><h1>Hello, <span class="gradient">Prince!</span></h1><p>Your AI study partner for Class 9 and beyond.</p><div class="suggestions"><button class="suggestion" data-prompt="Explain photosynthesis for Class 9">🧪 Explain a science topic</button><button class="suggestion" data-prompt="Give me 5 general knowledge quiz questions">🌎 General knowledge quiz</button><button class="suggestion" data-prompt="Teach me algebra step by step">📐 Learn mathematics</button><button class="suggestion" data-prompt="Tell me an interesting fact about space">🚀 Explore space</button></div>';
+  chat.appendChild(div);
+}
+
+function openConversation(index){
+  const item = conversations[index];
+  if (!item) return;
+  activeId = item.id;
+  current = item.messages.slice();
+  chat.replaceChildren();
+  current.forEach(m=>addMessage(m.role,m.content));
+  closeMenu();
+}
+
+function newChat(){
+  if (busy) return;
+  persistCurrent();
+  current = [];
+  activeId = makeId();
+  showWelcome();
+  $("status").textContent = "New conversation";
+  closeMenu();
+}
+
+function closeMenu(){
+  $("sidebar").classList.remove("open");
+  $("overlay").classList.add("hidden");
+}
+
+$("newChat").onclick = newChat;
+$("clearHistory").onclick = ()=>{
+  if (confirm("Delete all saved chat history from this browser?")){
+    conversations = [];
+    current = [];
+    activeId = makeId();
+    saveHistory();
+    renderHistory();
+    showWelcome();
+  }
+};
+$("menuBtn").onclick = ()=>{
+  $("sidebar").classList.toggle("open");
+  $("overlay").classList.toggle("hidden");
+};
+$("overlay").onclick = closeMenu;
+
+chat.addEventListener("click", e=>{
+  const b = e.target.closest("[data-prompt]");
+  if (b){ promptBox.value = b.dataset.prompt; promptBox.focus(); }
+});
+
+$("themeBtn").onclick = ()=>{
+  dark = !dark;
+  if (!dark){
+    document.documentElement.style.setProperty("--bg","#f5f5f7");
+    document.documentElement.style.setProperty("--panel","#ffffff");
+    document.documentElement.style.setProperty("--card","#e9e9ef");
+    document.documentElement.style.setProperty("--text","#20212a");
+    document.documentElement.style.setProperty("--muted","#666879");
+    document.documentElement.style.setProperty("--border","#ddddE6");
+    $("sidebar").style.background = "#eeeef4";
+  } else {
+    ["bg:#101114","panel:#18191d","card:#222329","text:#f5f5f5","muted:#a2a3ad","border:#303137"].forEach(x=>{
+      const p=x.split(":"); document.documentElement.style.setProperty("--"+p[0],p[1]);
+    });
+    $("sidebar").style.background = "#17181b";
+  }
+};
+
+promptBox.addEventListener("input",()=>{
+  promptBox.style.height = "auto";
+  promptBox.style.height = Math.min(promptBox.scrollHeight,180)+"px";
+});
+promptBox.addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("chatForm").requestSubmit();}
+});
+
+$("chatForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const text = promptBox.value.trim();
+  if(!text || busy) return;
+
+  busy = true;
+  $("sendBtn").disabled = true;
+  $("status").textContent = "Prince AI is thinking...";
+  promptBox.value = "";
+  promptBox.style.height = "auto";
+
+  current.push({role:"user",content:text});
+  addMessage("user",text);
+  const replyBubble = addMessage("assistant","Thinking...");
+
+  try {
+    // Your backend must keep GROQ_API_KEY secret.
+    const response = await fetch("/api/chat",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:$("model").value,
+        messages:[
+          {role:"system",content:"You are Prince AI, a friendly and helpful assistant for Prince, a Class 9 student. Explain concepts clearly, use age-appropriate language, and support Hindi, Hinglish and English."},
+          ...current
+        ]
+      })
+    });
+
+    const data = await response.json();
+    if(!response.ok) throw new Error(data.error || "Server error ("+response.status+")");
+    if(typeof data.reply!=="string") throw new Error("Unexpected server response.");
+    replyBubble.textContent = data.reply;
+    current.push({role:"assistant",content:data.reply});
+    persistCurrent();
+    $("status").textContent = "Ready to chat";
+  } catch(err) {
+    replyBubble.textContent = "Connection error: " + err.message +
+      "\n\nMake sure your secure backend is running at /api/chat.";
+    $("status").textContent = "Could not connect";
+  } finally {
+    busy = false;
+    $("sendBtn").disabled = false;
+    chat.scrollTop = chat.scrollHeight;
+  }
+});
+
+loadHistory();
+</script>
+</body>
+</html>
